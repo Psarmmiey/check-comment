@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/urfave/cli"
 )
 
 // CheckProject checks an entire project for controller functions with comments conforming to the Go Swaggo format.
@@ -134,26 +136,34 @@ func CheckControllerFunctions(filePath string) (map[string]struct {
 }
 
 func main() {
-	fmt.Println("Checking project...")
+	app := cli.NewApp()
+	app.Name = "check-doc"
+	app.Usage = "Check if go functions in the project have comments conforming to the Go Swaggo format"
+	app.Version = "0.0.1"
 
-	result, err := CheckProject("/Users/psarmmiey/development/dev/GOLA/blockchain-horizon-plus")
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "path, p",
+			Value: ".",
+			Usage: "Path to the project's root directory",
+		},
+	}
+
+	app.Action = func(c *cli.Context) error {
+		projectPath := c.String("path")
+		results, err := CheckProject(projectPath)
+		if err != nil {
+			return err
+		}
+
+		for functionName, funcInfo := range results {
+			fmt.Printf("Function %s: %v - missing %v\n", functionName, funcInfo.HasAll, funcInfo.Missing)
+		}
+		return nil
+	}
+
+	err := app.Run(os.Args)
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
 	}
-
-	hasError := false
-	for _, v := range result {
-		if !v.HasAll {
-			fmt.Printf("Function %s: %t - missing %v\n", v.Name, v.HasAll, v.Missing)
-			hasError = true
-		}
-	}
-
-	if hasError {
-		os.Exit(1)
-	} else {
-		os.Exit(0)
-	}
-
 }
