@@ -1,4 +1,4 @@
-module check-comment
+module github.com/Psarmmiey/check-comment
 
 go 1.19
 
