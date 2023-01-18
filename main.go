@@ -131,7 +131,7 @@ func CheckControllerFunctions(filePath string) (map[string]*CheckResult, error) 
 func main() {
 	app := cli.NewApp()
 	app.Name = "check-doc"
-	app.Usage = "Check if go functions in the project have comments conforming to the Go Swaggo format"
+	app.Usage = "Check if go controller functions in the project have comments conforming to the Go Swaggo format"
 	app.Version = "0.0.1"
 
 	app.Flags = []cli.Flag{
@@ -143,6 +143,7 @@ func main() {
 	}
 
 	app.Action = func(c *cli.Context) error {
+		fmt.Println("Checking project...")
 		projectPath := c.String("path")
 		results, err := CheckProject(projectPath)
 		if err != nil {
@@ -157,7 +158,7 @@ func main() {
 		if len(failedFunctions) > 0 {
 			fmt.Println("The following functions failed the comment check:")
 			for functionName, funcInfo := range failedFunctions {
-				fmt.Printf("Function %s in %s: missing %v\n", functionName, funcInfo.File, funcInfo.Missing)
+				fmt.Printf("\nFunction %s in %s: missing %v\n", functionName, funcInfo.File, funcInfo.Missing)
 			}
 			return fmt.Errorf("some functions failed the comment check")
 		} else {
