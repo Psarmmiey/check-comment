@@ -12,18 +12,18 @@ import (
 	"github.com/urfave/cli"
 )
 
-// CheckProject checks an entire project for controller functions with comments conforming to the Go Swaggo format.
-// It returns a map of function names to a boolean indicating whether the function has a comment conforming to the Go Swaggo format or not.
-func CheckProject(projectPath string) (map[string]struct {
+// CheckResult is a struct that holds the information about the result of a check on a function
+type CheckResult struct {
 	Name    string
 	HasAll  bool
 	Missing []string
-}, error) {
-	results := make(map[string]struct {
-		Name    string
-		HasAll  bool
-		Missing []string
-	})
+	File    string
+}
+
+// CheckProject checks an entire project for controller functions with comments conforming to the Go Swaggo format.
+// It returns a map of function names to a CheckResult struct indicating whether the function has a comment conforming to the Go Swaggo format or not.
+func CheckProject(projectPath string) (map[string]CheckResult, error) {
+	results := make(map[string]CheckResult)
 
 	// Walk through the project directory
 	err := filepath.Walk(projectPath, func(path string, info os.FileInfo, err error) error {
@@ -32,7 +32,6 @@ func CheckProject(projectPath string) (map[string]struct {
 		}
 		if info.IsDir() {
 			// If the directory is the "controller" folder
-			//	fmt.Println("Checking directory: ", info.Name(), " - ", path)
 			if info.Name() == "controllers" {
 				mainPath := filepath.Join(path, "main.go")
 				// check for main.go file in the controller folder
@@ -42,7 +41,7 @@ func CheckProject(projectPath string) (map[string]struct {
 						return err
 					}
 					for functionName, funcInfo := range controllerFunctions {
-						results[functionName] = funcInfo
+						results[functionName] = *funcInfo
 					}
 				}
 			}
@@ -57,11 +56,10 @@ func CheckProject(projectPath string) (map[string]struct {
 	return results, nil
 }
 
-func CheckControllerFunctions(filePath string) (map[string]struct {
-	Name    string
-	HasAll  bool
-	Missing []string
-}, error) {
+// CheckControllerFunctions checks a single file for controller functions with comments conforming to the Go Swaggo format.
+// It returns a map of function names to a CheckResult struct indicating whether the function has a comment conforming
+
+func CheckControllerFunctions(filePath string) (map[string]*CheckResult, error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
 	if err != nil {
@@ -69,11 +67,7 @@ func CheckControllerFunctions(filePath string) (map[string]struct {
 	}
 
 	// Create a map to store the results
-	results := make(map[string]struct {
-		Name    string
-		HasAll  bool
-		Missing []string
-	})
+	results := make(map[string]*CheckResult)
 
 	// Check each function in the file
 	for _, decl := range f.Decls {
@@ -121,15 +115,14 @@ func CheckControllerFunctions(filePath string) (map[string]struct {
 				missingComments = append(missingComments, "@summary", "@description", "@tags", "@accept", "@produce", "@router")
 				hasAll = false
 			}
-			results[fn.Name.Name] = struct {
-				Name    string
-				HasAll  bool
-				Missing []string
-			}{
+			// Add the result to the map
+			results[fn.Name.Name] = &CheckResult{
 				Name:    fn.Name.Name,
 				HasAll:  hasAll,
 				Missing: missingComments,
+				File:    filePath,
 			}
+
 		}
 	}
 	return results, nil
@@ -155,11 +148,22 @@ func main() {
 		if err != nil {
 			return err
 		}
-
+		failedFunctions := make(map[string]CheckResult)
 		for functionName, funcInfo := range results {
-			fmt.Printf("Function %s: %v - missing %v\n", functionName, funcInfo.HasAll, funcInfo.Missing)
+			if !funcInfo.HasAll {
+				failedFunctions[functionName] = funcInfo
+			}
 		}
-		return nil
+		if len(failedFunctions) > 0 {
+			fmt.Println("The following functions failed the comment check:")
+			for functionName, funcInfo := range failedFunctions {
+				fmt.Printf("Function %s in %s: missing %v\n", functionName, funcInfo.File, funcInfo.Missing)
+			}
+			return fmt.Errorf("some functions failed the comment check")
+		} else {
+			fmt.Println("All functions passed the comment check.")
+			return nil
+		}
 	}
 
 	err := app.Run(os.Args)
