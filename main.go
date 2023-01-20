@@ -22,7 +22,7 @@ type CheckResult struct {
 
 // CheckProject checks an entire project for controller functions with comments conforming to the Go Swaggo format.
 // It returns a map of function names to a CheckResult struct indicating whether the function has a comment conforming to the Go Swaggo format or not.
-func CheckProject(projectPath, folderName, fileName string) (map[string]CheckResult, error) {
+func CheckProject(projectPath string) (map[string]CheckResult, error) {
 	results := make(map[string]CheckResult)
 
 	// Walk through the project directory
@@ -32,8 +32,8 @@ func CheckProject(projectPath, folderName, fileName string) (map[string]CheckRes
 		}
 		if info.IsDir() {
 			// If the directory is the "controller" folder
-			if info.Name() == folderName {
-				mainPath := filepath.Join(path, fileName)
+			if info.Name() == "controllers" {
+				mainPath := filepath.Join(path, "main.go")
 				// check for main.go file in the controller folder
 				if _, err := os.Stat(mainPath); err == nil {
 					controllerFunctions, err := CheckControllerFunctions(mainPath)
@@ -140,24 +140,12 @@ func main() {
 			Value: ".",
 			Usage: "Path to the project's root directory",
 		},
-		cli.StringFlag{
-			Name:  "folder, f",
-			Value: "controllers",
-			Usage: "Path to the folder containing the controller files. If not specified, the program will search for a folder named 'controllers' in the project's root directory",
-		},
-		cli.StringFlag{
-			Name:  "file, n",
-			Value: "main.go",
-			Usage: "Name of the file containing the controller functions. If not specified, the program will search for a file named 'main.go' in the 'controllers' folder",
-		},
 	}
 
 	app.Action = func(c *cli.Context) error {
 		fmt.Println("Checking project...")
 		projectPath := c.String("path")
-		folderName := c.String("folder")
-		fileName := c.String("fileName")
-		results, err := CheckProject(projectPath, folderName, fileName)
+		results, err := CheckProject(projectPath)
 		if err != nil {
 			return err
 		}
