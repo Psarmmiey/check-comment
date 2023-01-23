@@ -129,6 +129,7 @@ func CheckControllerFunctions(filePath string) (map[string]*CheckResult, error) 
 }
 
 func main() {
+	fmt.Println("Checking project...")
 	app := cli.NewApp()
 	app.Name = "check-doc"
 	app.Usage = "Check if go controller functions in the project have comments conforming to the Go Swaggo format"
@@ -143,7 +144,6 @@ func main() {
 	}
 
 	app.Action = func(c *cli.Context) error {
-		fmt.Println("Checking project...")
 		projectPath := c.String("path")
 		results, err := CheckProject(projectPath)
 		if err != nil {
@@ -170,5 +170,8 @@ func main() {
 	err := app.Run(os.Args)
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
+	} else {
+		os.Exit(0)
 	}
 }
